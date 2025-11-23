@@ -24,53 +24,75 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
-
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        fetch-depth: 0
+        
     - name: Set up Python
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v4
       with:
         python-version: ${{ env.PYTHON_VERSION }}
-
+        
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        if [ -f "requirements.txt" ]; then pip install -r requirements.txt; fi
-
-    - name: Create preprocessing directory
-      run: mkdir -p namadataset_preprocessing
-
-    - name: Verify raw dataset exists
+        pip install -r requirements.txt
+        
+    - name: Create directories
       run: |
-        if [ ! -f "namadataset_raw/winequality-red.csv" ]; then
-          echo " Dataset tidak ditemukan di namadataset_raw/"
+        mkdir -p namadataset_preprocessing
+        
+    - name: Check dataset files
+      run: |
+        echo "Checking dataset files:"
+        if [ -f "namadataset_raw/winequality-red.csv" ]; then
+          echo "Dataset file found"
+          echo "File size:"
+          wc -l namadataset_raw/winequality-red.csv
+        else
+          echo "Dataset file not found in namadataset_raw/"
+          echo "Available files:"
+          find . -name "*.csv" -type f | head -10
           exit 1
         fi
-        echo "✔ Dataset ditemukan"
-        wc -l namadataset_raw/winequality-red.csv
-
-    - name: Run preprocessing script
+        
+    - name: Run automated preprocessing
       run: |
         cd preprocessing
-        python automate_naufal.py
-
-    - name: Verify processed output
+        python automate_Naufal_daffa_abdu_al_hafidl.py
+        echo "Preprocessing script completed"
+        
+    - name: Verify processed data
       run: |
-        echo "Isi folder processed:"
-        ls -la namadataset_preprocessing || exit 1
-
-    - name: Commit changes
+        echo "Verifying processed data:"
+        if [ -d "namadataset_preprocessing" ]; then
+          echo "Processed files:"
+          ls -la namadataset_preprocessing/
+          for file in namadataset_preprocessing/*.csv; do
+            if [ -f "$file" ]; then
+              echo "File: $file - Lines: $(wc -l < "$file")"
+            fi
+          done
+        else
+          echo "ERROR: namadataset_preprocessing directory not created"
+          exit 1
+        fi
+        
+    - name: Commit processed data
       run: |
         git config --local user.email "action@github.com"
         git config --local user.name "GitHub Action"
         git add namadataset_preprocessing/
-
+        
         if git diff --staged --quiet; then
           echo "No changes to commit"
         else
-          git commit -m "Auto-update: Processed wine data"
+          git commit -m "Auto-update: Processed wine quality data [$(date +'%Y-%m-%d %H:%M')]"
           git push
+          echo "Changes pushed successfully"
         fi
-
-    - name: Upload artifact
+        
+    - name: Upload processed data as artifact
       uses: actions/upload-artifact@v4
       with:
         name: processed-wine-data
