@@ -59,7 +59,7 @@ jobs:
     - name: Run automated preprocessing
       run: |
         cd preprocessing
-        python automate_Naufal_daffa_abdu_al_hafidl.py
+        python automate_Naufal.py
         echo "Preprocessing script completed"
         
     - name: Verify processed data
