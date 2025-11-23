@@ -1,0 +1,92 @@
+name: Wine Quality Data Preprocessing
+
+on:
+  push:
+    branches: [ main, master ]
+    paths:
+      - 'namadataset_raw/**'
+      - 'preprocessing/**'
+      - '.github/workflows/**'
+  pull_request:
+    branches: [ main, master ]
+  schedule:
+    - cron: '0 0 * * 0'
+  workflow_dispatch:
+
+env:
+  PYTHON_VERSION: '3.9'
+
+jobs:
+  preprocess-wine-data:
+    name: Preprocess Wine Quality Dataset
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        fetch-depth: 0
+        
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        
+    - name: Create directories
+      run: |
+        mkdir -p namadataset_preprocessing
+        
+    - name: Check dataset files
+      run: |
+        echo "Checking dataset files:"
+        find . -name "*.csv" -type f | head -10
+        if [ -f "namadataset_raw/winequality-red.csv" ]; then
+          echo "Dataset file found"
+          wc -l namadataset_raw/winequality-red.csv
+        else
+          echo "Dataset file not found"
+          exit 1
+        fi
+        
+    - name: Run automated preprocessing
+      run: |
+        cd preprocessing
+        python automate_naufal.py
+        
+    - name: Verify processed data
+      run: |
+        echo "Verifying processed data:"
+        ls -la namadataset_preprocessing/
+        for file in namadataset_preprocessing/*.csv; do
+          if [ -f "$file" ]; then
+            echo "File: $file"
+            wc -l "$file"
+          fi
+        done
+        
+    - name: Commit processed data
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add namadataset_preprocessing/
+        
+        if git diff --staged --quiet; then
+          echo "No changes to commit"
+        else
+          git commit -m "Auto-update: Processed wine quality data [$(date +'%Y-%m-%d %H:%M')]"
+          git push
+          echo "Changes pushed successfully"
+        fi
+        
+    - name: Upload processed data
+      uses: actions/upload-artifact@v3
+      with:
+        name: processed-wine-data
+        path: namadataset_preprocessing/*.csv
+        retention-days: 30
