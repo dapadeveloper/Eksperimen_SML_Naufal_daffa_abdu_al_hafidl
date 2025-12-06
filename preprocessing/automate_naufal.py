@@ -1,114 +1,111 @@
+# automate_Naufal.py
+
+"""
+Automasi Eksperimen Banknote Authentication
+
+Struktur:
+- Dataset mentah: ../namadataset_raw/banknote_authentication.csv
+- Output preprocessing: ../namadataset_preprocessing/
+- Model tersimpan: banknote_rf_model.pkl
+- Prediksi batch: dari file CSV input → output CSV
+"""
+
 import pandas as pd
-import numpy as np
-from sklearn.preprocessing import StandardScaler, LabelEncoder
-from sklearn.model_selection import train_test_split
+import joblib
+import argparse
 import os
-import sys
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
 
-def main():
-    print("Starting Heart Dataset Preprocessing")
+# Paths
+RAW_DATA_PATH = "../namadataset_raw/banknote_authentication.csv"
+PREPROCESS_DIR = "../namadataset_preprocessing/"
+MODEL_PATH = os.path.join(PREPROCESS_DIR, "banknote_rf_model.pkl")
 
-    # Build dataset path safely
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    dataset_path = os.path.join(script_dir, "../namadataset_raw/heart.csv")
+# Pastikan folder preprocessing ada
+os.makedirs(PREPROCESS_DIR, exist_ok=True)
 
-    if not os.path.exists(dataset_path):
-        print(f"ERROR: Dataset not found at: {dataset_path}")
-        sys.exit(1)
+def load_data(path=RAW_DATA_PATH):
+    """Load dataset dari folder raw"""
+    cols = ['variance', 'skewness', 'curtosis', 'entropy', 'class']
+    df = pd.read_csv(path, header=None, names=cols)
+    return df
 
-    try:
-        print("Loading dataset...")
-        df = pd.read_csv(dataset_path, sep=None, engine="python")
-        print(f"Data loaded successfully: {df.shape}")
+def preprocessing(df):
+    """Proses preprocessing sederhana"""
+    # Hapus duplikat
+    df = df.drop_duplicates()
+    
+    # Cek missing value (untuk dataset ini seharusnya tidak ada)
+    if df.isnull().sum().sum() > 0:
+        df = df.dropna()
+    
+    # Simpan hasil preprocessing ke folder
+    preprocessed_path = os.path.join(PREPROCESS_DIR, "banknote_preprocessed.csv")
+    df.to_csv(preprocessed_path, index=False)
+    print(f"Hasil preprocessing disimpan ke {preprocessed_path}")
+    return df
 
-        # Reject bad delimiter
-        if df.shape[1] == 1:
-            print("ERROR: Dataset has only 1 column (wrong delimiter).")
-            print(f"Columns read: {df.columns.tolist()}")
-            sys.exit(1)
+def train_and_save(df, model_path=MODEL_PATH):
+    """Train RandomForest dan simpan model"""
+    X = df[['variance','skewness','curtosis','entropy']]
+    y = df['class']
+    
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.2, random_state=42, stratify=y
+    )
+    
+    model = RandomForestClassifier(n_estimators=100, random_state=42)
+    model.fit(X_train, y_train)
+    
+    # Evaluasi
+    y_pred = model.predict(X_test)
+    print("=== Evaluasi Model ===")
+    print(f"Accuracy: {accuracy_score(y_test, y_pred):.4f}")
+    print("Confusion Matrix:\n", confusion_matrix(y_test, y_pred))
+    print("Classification Report:\n", classification_report(y_test, y_pred))
+    
+    # Simpan model
+    joblib.dump(model, model_path)
+    print(f"Model tersimpan ke {model_path}")
 
-        print(f"Columns detected: {df.columns.tolist()}")
-        print(f"Missing values found: {df.isnull().sum().sum()}")
-
-        df_processed = df.copy()
-
-        # Fill missing numeric values
-        df_processed = df_processed.fillna(df_processed.median(numeric_only=True))
-
-        # ==========================================
-        # AUTO DETECT TARGET COLUMN
-        # ==========================================
-        possible_targets = ["target", "disease", "output", "label", "class", "heart_disease"]
-        target_col = None
-
-        for col in df_processed.columns:
-            if col.lower() in [t.lower() for t in possible_targets]:
-                target_col = col
-                break
-
-        if target_col is None:
-            print("ERROR: Could not automatically detect target column.")
-            print("Rename target column to `target`, `class`, or `label`.")
-            sys.exit(1)
-
-        print(f"Detected target column: {target_col}")
-
-        # Encode target if needed
-        if df_processed[target_col].dtype == "object":
-            le = LabelEncoder()
-            df_processed["target_label"] = le.fit_transform(df_processed[target_col])
-        else:
-            df_processed["target_label"] = df_processed[target_col]
-
-        # ==========================================
-        # AUTO DETECT NUMERIC FEATURES
-        # ==========================================
-        numerical_features = df_processed.select_dtypes(include=["int64", "float64"]).columns.tolist()
-
-        # Remove encoded target
-        if "target_label" in numerical_features:
-            numerical_features.remove("target_label")
-
-        print(f"Numeric features detected: {numerical_features}")
-
-        # Scaling
-        scaler = StandardScaler()
-        df_processed[numerical_features] = scaler.fit_transform(df_processed[numerical_features])
-
-        # ==========================================
-        # TRAIN TEST SPLIT
-        # ==========================================
-        X = df_processed[numerical_features]
-        y = df_processed["target_label"]
-
-        print("Splitting dataset...")
-        X_train, X_test, y_train, y_test = train_test_split(
-            X, y, test_size=0.2, random_state=42, stratify=y
-        )
-
-        # ==========================================
-        # SAVE OUTPUT
-        # ==========================================
-        output_dir = os.path.join(script_dir, "../namadataset_preprocessing")
-        os.makedirs(output_dir, exist_ok=True)
-
-        print("Saving processed files...")
-
-        df_processed.to_csv(os.path.join(output_dir, "heart_processed.csv"), index=False)
-
-        train_df = pd.concat([X_train, y_train], axis=1)
-        test_df = pd.concat([X_test, y_test], axis=1)
-
-        train_df.to_csv(os.path.join(output_dir, "heart_train.csv"), index=False)
-        test_df.to_csv(os.path.join(output_dir, "heart_test.csv"), index=False)
-
-        print("Preprocessing completed successfully.")
-        print(f"Files saved to: {output_dir}")
-
-    except Exception as e:
-        print(f"ERROR during preprocessing: {e}")
-        sys.exit(1)
-
+def predict_from_file(model_path, input_csv, output_csv):
+    """Prediksi data baru dari CSV"""
+    model = joblib.load(model_path)
+    df = pd.read_csv(input_csv)
+    required_cols = ['variance','skewness','curtosis','entropy']
+    if not all(col in df.columns for col in required_cols):
+        raise ValueError(f"Input CSV harus memiliki kolom: {required_cols}")
+    X = df[required_cols]
+    df['predicted_class'] = model.predict(X)
+    df.to_csv(output_csv, index=False)
+    print(f"Prediksi disimpan ke {output_csv}")
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description="Automate Banknote Authentication")
+    
+    parser.add_argument(
+        "--train",
+        action="store_true",
+        help="Train model menggunakan dataset mentah + preprocessing"
+    )
+    
+    parser.add_argument(
+        "--predict",
+        nargs=2,
+        metavar=('INPUT_CSV', 'OUTPUT_CSV'),
+        help="Prediksi kelas untuk input CSV dan simpan ke output CSV"
+    )
+    
+    args = parser.parse_args()
+    
+    if args.train:
+        df = load_data()
+        df = preprocessing(df)
+        train_and_save(df)
+    elif args.predict:
+        input_csv, output_csv = args.predict
+        predict_from_file(MODEL_PATH, input_csv, output_csv)
+    else:
+        print("Tidak ada argumen diberikan. Gunakan --train atau --predict.")

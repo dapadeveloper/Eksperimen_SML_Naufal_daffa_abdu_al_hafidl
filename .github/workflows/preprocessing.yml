@@ -1,4 +1,4 @@
-name: Wine Quality Data Preprocessing
+name: banknote_authentication
 
 on:
   push:
@@ -18,7 +18,7 @@ env:
 
 jobs:
   preprocess-wine-data:
-    name: Preprocess Wine Quality Dataset
+    name: banknote_authentication
     runs-on: ubuntu-latest
     
     steps:
@@ -87,7 +87,7 @@ jobs:
         if git diff --staged --quiet; then
           echo "No changes to commit"
         else
-          git commit -m "Auto-update: Processed wine quality data [$(date +'%Y-%m-%d %H:%M')]"
+          git commit -m "Auto-update: Processed banknote_authentication data [$(date +'%Y-%m-%d %H:%M')]"
           git push
           echo "Changes pushed successfully"
         fi
