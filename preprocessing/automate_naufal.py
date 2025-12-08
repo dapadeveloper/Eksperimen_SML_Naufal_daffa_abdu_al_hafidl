@@ -2,48 +2,34 @@ import pandas as pd
 import argparse
 import os
 
-# Paths absolut
-BASE_DIR = os.path.abspath(os.path.dirname(__file__))  # folder script
-RAW_DATA_PATH = os.path.abspath(os.path.join(BASE_DIR, "../namadataset_raw/banknote_authentication.csv"))
-PREPROCESS_DIR = os.path.join(BASE_DIR, "namadataset_preprocessing")
-PREPROCESSED_PATH = os.path.join(PREPROCESS_DIR, "banknote_preprocessed.csv")
+BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 
-# Pastikan folder preprocessing ada
-os.makedirs(PREPROCESS_DIR, exist_ok=True)
+RAW_PATH = os.path.join(BASE_DIR, "../namadataset_raw/banknote_authentication.csv")
+PREP_DIR = os.path.join(BASE_DIR, "namadataset_preprocessing")
+PREP_PATH = os.path.join(PREP_DIR, "banknote_preprocessed.csv")
 
-def load_data(path=RAW_DATA_PATH):
-    """
-    Load dataset dengan aman.
-    Dataset Banknote Authentication sudah memiliki header asli,
-    jadi kita pakai header=0 agar tidak duplikasi.
-    """
+os.makedirs(PREP_DIR, exist_ok=True)
+
+def load_raw():
     cols = ['variance', 'skewness', 'curtosis', 'entropy', 'class']
-    df = pd.read_csv(path, header=0, names=cols)
-    print(f"Dataset loaded: {path} ({len(df)} rows)")
-    print("Class distribution:\n", df['class'].value_counts())
+    df = pd.read_csv(RAW_PATH, header=0, names=cols)
+    print(f"[INFO] Loaded raw dataset → {df.shape}")
     return df
 
-def preprocessing(df):
-    """Preprocessing: hapus duplikat & missing value"""
+def preprocess(df):
     df = df.drop_duplicates()
+    df = df.dropna()
 
-    if df.isnull().sum().sum() > 0:
-        df = df.dropna()
-
-    # Export hasil preprocessing (sesuai requirement Basic)
-    df.to_csv(PREPROCESSED_PATH, index=False)
-    print(f"Preprocessing completed. File saved to: {PREPROCESSED_PATH}")
-
-    return df
-
+    df.to_csv(PREP_PATH, index=False)
+    print(f"[INFO] Preprocessed dataset saved → {PREP_PATH}")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--preprocess", action="store_true", help="Run preprocessing only")
+    parser.add_argument("--run", action="store_true", help="Run preprocessing")
     args = parser.parse_args()
 
-    if args.preprocess:
-        df = load_data()
-        preprocessing(df)
+    if args.run:
+        df = load_raw()
+        preprocess(df)
     else:
-        print("No arguments provided. Use --preprocess.")
+        print("Usage: python automate_naufal.py --run")
