@@ -1,90 +1,58 @@
-name: banknote_authentication
+name: banknote_authentication_preprocessing
 
 on:
   push:
     branches: [ main, master ]
     paths:
       - 'namadataset_raw/**'
-      - 'preprocessing/**'
+      - 'automate_Naufal.py'
       - '.github/workflows/**'
   pull_request:
     branches: [ main, master ]
-  schedule:
-    - cron: '0 0 * * 0'
   workflow_dispatch:
 
-env:
-  PYTHON_VERSION: '3.9'
-
 jobs:
-  preprocess-only:
-    name: Preprocess Banknote Authentication
+  preprocessing:
+    name: Run Preprocessing (Banknote Authentication)
     runs-on: ubuntu-latest
 
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
-        fetch-depth: 0
 
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: ${{ env.PYTHON_VERSION }}
+        python-version: "3.10"
 
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install -r requirements.txt
-
-    - name: Create preprocessing folder
-      run: |
-        mkdir -p preprocessing/namadataset_preprocessing
-        mkdir -p preprocessing/namadataset_export
+        pip install pandas mlflow joblib scikit-learn
 
     - name: Verify dataset exists
       run: |
-        echo "Checking dataset files..."
+        echo "Checking dataset..."
         if [ -f "namadataset_raw/banknote_authentication.csv" ]; then
-          echo " Dataset found"
-          wc -l namadataset_raw/banknote_authentication.csv
+          echo "Dataset ditemukan."
         else
-          echo " Dataset file not found!"
+          echo "Dataset TIDAK ditemukan!"
           exit 1
         fi
 
-    - name: Run automate_naufal.py (preprocess only)
+    - name: Run preprocessing
       run: |
-        cd preprocessing
+        echo "Menjalankan preprocessing..."
         python automate_Naufal.py --preprocess
-        echo " Preprocessing completed"
+        echo "Preprocessing selesai."
 
-    - name: Verify processed data
+    - name: List preprocessing outputs
       run: |
-        echo "Processed files in preprocessing/namadataset_preprocessing/:"
-        ls -la preprocessing/namadataset_preprocessing/
-        for file in preprocessing/namadataset_preprocessing/*; do
-          if [ -f "$file" ]; then
-            echo "File: $file - Lines: $(wc -l < "$file")"
-          fi
-        done
+        echo "Hasil preprocessing:"
+        ls -la namadataset_preprocessing/
 
-    - name: Verify exported data
-      run: |
-        echo "Exported files in preprocessing/namadataset_export/:"
-        ls -la preprocessing/namadataset_export/
-
-    - name: Commit processed data if changes exist
-      run: |
-        chmod +x preprocessing/commit_preprocessed.sh
-        ./preprocessing/commit_preprocessed.sh
-
-    - name: Upload processed data as artifact
+    - name: Upload Preprocessed Data
       uses: actions/upload-artifact@v4
       with:
-        name: processed-banknote-data
-        path: |
-          preprocessing/namadataset_preprocessing/
-          preprocessing/namadataset_export/
-        retention-days: 30
+        name: banknote_preprocessed
+        path: namadataset_preprocessing/
