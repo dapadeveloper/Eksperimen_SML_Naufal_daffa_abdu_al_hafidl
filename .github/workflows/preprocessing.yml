@@ -17,8 +17,8 @@ env:
   PYTHON_VERSION: '3.9'
 
 jobs:
-  preprocess-and-train:
-    name: Preprocess & Train Banknote Authentication
+  preprocess-only:
+    name: Preprocess Banknote Authentication
     runs-on: ubuntu-latest
 
     steps:
@@ -41,23 +41,24 @@ jobs:
     - name: Create preprocessing folder
       run: |
         mkdir -p preprocessing/namadataset_preprocessing
+        mkdir -p preprocessing/namadataset_export
 
     - name: Verify dataset exists
       run: |
         echo "Checking dataset files..."
         if [ -f "namadataset_raw/banknote_authentication.csv" ]; then
-          echo "Dataset found"
+          echo " Dataset found"
           wc -l namadataset_raw/banknote_authentication.csv
         else
-          echo "Dataset file not found!"
+          echo " Dataset file not found!"
           exit 1
         fi
 
-    - name: Run automate_naufal.py (preprocess & train)
+    - name: Run automate_naufal.py (preprocess only)
       run: |
         cd preprocessing
-        python automate_naufal.py --train
-        echo "Preprocessing and training completed"
+        python automate_Naufal.py --preprocess
+        echo " Preprocessing completed"
 
     - name: Verify processed data
       run: |
@@ -69,6 +70,11 @@ jobs:
           fi
         done
 
+    - name: Verify exported data
+      run: |
+        echo "Exported files in preprocessing/namadataset_export/:"
+        ls -la preprocessing/namadataset_export/
+
     - name: Commit processed data if changes exist
       run: |
         chmod +x preprocessing/commit_preprocessed.sh
@@ -78,5 +84,7 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: processed-banknote-data
-        path: preprocessing/namadataset_preprocessing/
+        path: |
+          preprocessing/namadataset_preprocessing/
+          preprocessing/namadataset_export/
         retention-days: 30
