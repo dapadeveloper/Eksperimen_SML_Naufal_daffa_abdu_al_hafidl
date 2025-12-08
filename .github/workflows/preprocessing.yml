@@ -4,7 +4,7 @@ on:
   push:
     paths:
       - "namadataset_raw/banknote_authentication.csv"
-      - "preprocessing/automate_naufal.py"
+      - "automate_naufal.py"  # script ada di root, bukan di preprocessing/
 
 jobs:
   preprocess:
@@ -21,14 +21,15 @@ jobs:
 
       - name: Install dependencies
         run: |
+          pip install --upgrade pip
           pip install pandas scikit-learn matplotlib seaborn
 
       - name: Run preprocessing script
         run: |
-          python preprocessing/automate_naufal.py
+          python automate_naufal.py
 
       - name: Upload processed dataset
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v4   # ubah v3 → v4
         with:
           name: banknote_preprocessed
           path: preprocessing/namadataset_preprocessing/banknote_preprocessed.csv
