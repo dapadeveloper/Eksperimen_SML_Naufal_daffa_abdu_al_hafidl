@@ -5,7 +5,7 @@ on:
     branches: [ main, master ]
     paths:
       - 'namadataset_raw/**'
-      - 'automate_Naufal.py'
+      - 'automate_naufal.py'
       - '.github/workflows/**'
   pull_request:
     branches: [ main, master ]
@@ -43,7 +43,7 @@ jobs:
     - name: Run preprocessing
       run: |
         echo "Menjalankan preprocessing..."
-        python automate_Naufal.py --preprocess
+        python automate_naufal.py --preprocess
         echo "Preprocessing selesai."
 
     - name: List preprocessing outputs
