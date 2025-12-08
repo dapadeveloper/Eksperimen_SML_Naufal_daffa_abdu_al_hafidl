@@ -1,76 +1,34 @@
-name: preprocessing-pipeline
+name: Run Preprocessing Automatically
 
 on:
   push:
-    branches: [ main, master ]
     paths:
-      - 'namadataset_raw/**'
-      - 'preprocessing/**'
-      - '.workflow/**'
-  workflow_dispatch:
-
-env:
-  PYTHON_VERSION: '3.9'
+      - "namadataset_raw/banknote_authentication.csv"
+      - "preprocessing/automate_naufal.py"
 
 jobs:
   preprocess:
-    name: Run Preprocessing Pipeline
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout Repository
-      uses: actions/checkout@v4
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
-        fetch-depth: 0
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
-    - name: Setup Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: ${{ env.PYTHON_VERSION }}
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
 
-    - name: Install Requirements
-      run: |
-        pip install pandas
+      - name: Install dependencies
+        run: |
+          pip install pandas scikit-learn matplotlib seaborn
 
-    - name: Verify dataset exists
-      run: |
-        echo "Checking dataset file..."
-        if [ -f "namadataset_raw/banknote_authentication.csv" ]; then
-          echo "Dataset found."
-          wc -l namadataset_raw/banknote_authentication.csv
-        else
-          echo "Dataset missing! Please upload raw dataset to namadataset_raw/"
-          exit 1
-        fi
+      - name: Run preprocessing script
+        run: |
+          python preprocessing/automate_naufal.py
 
-    - name: Run automate preprocessing
-      run: |
-        cd preprocessing
-        python automate_naufal.py --run
-
-    - name: Show preprocessing output
-      run: |
-        echo "Generated files:"
-        ls -lah preprocessing/namadataset_preprocessing/
-
-    - name: Commit changes if any
-      run: |
-        git config --global user.name "github-actions"
-        git config --global user.email "github-actions@github.com"
-
-        git add preprocessing/namadataset_preprocessing/*
-
-        if git diff --cached --quiet; then
-          echo "No changes to commit."
-        else
-          git commit -m "Auto-update preprocessed dataset [CI]"
-          git push
-        fi
-
-    - name: Upload artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: preprocessed-banknote-data
-        path: preprocessing/namadataset_preprocessing/
-        retention-days: 7
+      - name: Upload processed dataset
+        uses: actions/upload-artifact@v3
+        with:
+          name: banknote_preprocessed
+          path: preprocessing/namadataset_preprocessing/banknote_preprocessed.csv

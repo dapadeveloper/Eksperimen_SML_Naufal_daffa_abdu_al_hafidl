@@ -1,35 +1,55 @@
 import pandas as pd
-import argparse
+from sklearn.preprocessing import StandardScaler
 import os
 
-BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+# ------------------------------------------------------------
+# 1. File input dan output
+# ------------------------------------------------------------
 
-RAW_PATH = os.path.join(BASE_DIR, "../namadataset_raw/banknote_authentication.csv")
-PREP_DIR = os.path.join(BASE_DIR, "namadataset_preprocessing")
-PREP_PATH = os.path.join(PREP_DIR, "banknote_preprocessed.csv")
+raw_file = r"C:\Users\USER\Documents\maggang\SML2_Naufaldaffa\Eksperimen_SML_Naufal_daffa_abdu_al_hafidl\namadataset_raw\banknote_authentication.csv"
+output_folder = r"C:\Users\USER\Documents\maggang\SML2_Naufaldaffa\Eksperimen_SML_Naufal_daffa_abdu_al_hafidl\preprocessing\namadataset_preprocessing"
+output_file = os.path.join(output_folder, "banknote_preprocessed.csv")
 
-os.makedirs(PREP_DIR, exist_ok=True)
+# Buat folder preprocessing jika belum ada
+os.makedirs(output_folder, exist_ok=True)
 
-def load_raw():
-    cols = ['variance', 'skewness', 'curtosis', 'entropy', 'class']
-    df = pd.read_csv(RAW_PATH, header=0, names=cols)
-    print(f"[INFO] Loaded raw dataset → {df.shape}")
-    return df
+# ------------------------------------------------------------
+# 2. Load Dataset
+# ------------------------------------------------------------
 
-def preprocess(df):
-    df = df.drop_duplicates()
-    df = df.dropna()
+# Jika file raw belum ada, download otomatis
+if not os.path.exists(raw_file):
+    print("[INFO] File raw belum ada. Download dataset dari UCI...")
+    url = "https://archive.ics.uci.edu/ml/machine-learning-databases/00267/data_banknote_authentication.txt"
+    columns = ["variance", "skewness", "curtosis", "entropy", "class"]
+    df = pd.read_csv(url, header=None, names=columns)
+    df.to_csv(raw_file, index=False)
+    print("[INFO] Dataset berhasil disimpan ke:", raw_file)
+else:
+    df = pd.read_csv(raw_file)
 
-    df.to_csv(PREP_PATH, index=False)
-    print(f"[INFO] Preprocessed dataset saved → {PREP_PATH}")
+print("[INFO] Dataset berhasil dibaca, 5 baris pertama:")
+print(df.head())
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--run", action="store_true", help="Run preprocessing")
-    args = parser.parse_args()
+# ------------------------------------------------------------
+# 3. Preprocessing
+# ------------------------------------------------------------
 
-    if args.run:
-        df = load_raw()
-        preprocess(df)
-    else:
-        print("Usage: python automate_naufal.py --run")
+# Hapus duplikasi
+df = df.drop_duplicates()
+
+# Tangani missing values (jika ada)
+if df.isna().sum().sum() > 0:
+    df = df.fillna(df.mean())
+
+# Semua kolom numerik kecuali target
+num_cols = ["variance", "skewness", "curtosis", "entropy"]
+scaler = StandardScaler()
+df[num_cols] = scaler.fit_transform(df[num_cols])
+
+# ------------------------------------------------------------
+# 4. Simpan hasil preprocessing
+# ------------------------------------------------------------
+
+df.to_csv(output_file, index=False)
+print(f"[INFO] Hasil preprocessing disimpan di: {output_file}")
